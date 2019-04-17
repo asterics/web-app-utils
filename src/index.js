@@ -3,13 +3,15 @@
  * This Javascript library provides functions that simplify the creation of web-based user interfaces interacting with an AsTeRICS model.
  * The lib provides functions for downloading files from a webserver, widget <-> model synchronization, up/download/start models, setting/getting properties of deployed model.
  *
- * @requires jquery-3.2.1.min.js (or maybe lower versions also)
- * @requires JSmap.js (AsTeRICS 3.0)
- * @requires areCommunicator.js (AsTeRICS 3.0)
- *
  * @author Martin Deinhofer
  * @version 0.1
  */
+
+// import { XMLHttpRequest } from "xmlhttprequest";
+import axios from "axios";
+// import $ from "jquery";
+// import { DOMParser, XMLSerializer } from "xmldom";
+import { startModel, uploadModel, setRuntimeComponentProperties, storeData } from "@asterics/rest";
 
 /**
  * Loads a file hosted on the same webserver as this file and returns the contents as plain text.
@@ -17,39 +19,49 @@
  * @param {function(fileContentsAsString)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
  */
-function loadFileFromWebServer(relFilePath, successCallback, errorCallback) {
+export function loadFileFromWebServer(relFilePath, successCallback, errorCallback) {
   //assign default callback functions if none was provided.
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
 
-  var httpReq = new XMLHttpRequest();
-  console.log("location.origin: " + location.origin);
-
-  var pathFix = "";
-  if (Object.is(location.origin, "https://asterics.github.io") || Object.is(location.origin, "http://asterics.github.io")) {
-    pathFix = "/AsTeRICS";
-    console.log("Adding pathFix: " + pathFix);
-  }
-  relFilePath = location.origin + pathFix + "/" + relFilePath;
-  console.log("Fetching file from webserver: " + relFilePath);
-
-  /*
-	//With jQuery you could use something like this to fetch the file easily, nevertheless to be independent we use the hard approach.
-	$.get(relFilePath).then(function(response) {
-		successCallback(response);
-	});*/
-
-  httpReq.onreadystatechange = function() {
-    if (httpReq.readyState === XMLHttpRequest.DONE && (httpReq.status === 404 || httpReq.status === 0)) {
-      alert("Could not find requested file: " + relFilePath);
-    } else if (httpReq.readyState === XMLHttpRequest.DONE && httpReq.status === 200) {
-      //success, so call success-callback
+  axios
+    .get(relFilePath)
+    .then(function(response) {
       console.log("File from Webserver successfully loaded: " + relFilePath);
-      successCallback(httpReq.responseText);
-    }
-  };
-  httpReq.open("GET", relFilePath, true);
-  httpReq.send();
+      successCallback(response.data);
+    })
+    .catch(function(error) {
+      errorCallback(error);
+    });
+
+  // var httpReq = new XMLHttpRequest();
+  // console.log("location.origin: " + location.origin);
+
+  // var pathFix = "";
+  // if (Object.is(location.origin, "https://asterics.github.io") || Object.is(location.origin, "http://asterics.github.io")) {
+  //   pathFix = "/AsTeRICS";
+  //   console.log("Adding pathFix: " + pathFix);
+  // }
+  // relFilePath = location.origin + pathFix + "/" + relFilePath;
+  // console.log("Fetching file from webserver: " + relFilePath);
+
+  // /*
+  // //With jQuery you could use something like this to fetch the file easily, nevertheless to be independent we use the hard approach.
+  // $.get(relFilePath).then(function(response) {
+  // 	successCallback(response);
+  // });*/
+
+  // httpReq.onreadystatechange = function() {
+  //   if (httpReq.readyState === XMLHttpRequest.DONE && (httpReq.status === 404 || httpReq.status === 0)) {
+  //     alert("Could not find requested file: " + relFilePath);
+  //   } else if (httpReq.readyState === XMLHttpRequest.DONE && httpReq.status === 200) {
+  //     //success, so call success-callback
+  //     console.log("File from Webserver successfully loaded: " + relFilePath);
+  //     successCallback(httpReq.responseText);
+  //   }
+  // };
+  // httpReq.open("GET", relFilePath, true);
+  // httpReq.send();
 }
 
 /**
@@ -58,7 +70,7 @@ function loadFileFromWebServer(relFilePath, successCallback, errorCallback) {
  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
  */
-function deployModelFromWebserver(relFilePath, successCallback, errorCallback) {
+export function deployModelFromWebserver(relFilePath, successCallback, errorCallback) {
   //assign default callback functions if none was provided.
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
@@ -87,25 +99,36 @@ function deployModelFromWebserver(relFilePath, successCallback, errorCallback) {
  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents. 
  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error. 
  */
-function deployModelFromWebserverApplySettingsAndStartModel(relFilePath, propertyMap, successCallback, errorCallback) {
+export function deployModelFromWebserverApplySettingsAndStartModel(relFilePath = "", propertyMap = {}, successCallback, errorCallback) {
+  if (typeof propertyMap === "string") propertyMap = JSON.parse(propertyMap);
+  let propertyCount = 0;
+  for (let k in propertyMap) {
+    propertyCount += Object.keys(propertyMap[k]).length;
+  }
+
   //assign default callback functions if none was provided.
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
 
   deployModelFromWebserver(relFilePath, function() {
-    setRuntimeComponentProperties(
-      function(data, HTTPstatus) {
-        if (JSON.parse(data).length == 0) {
-          var errorMsg = "The property settings could not be applied.";
-          alert(errorMsg);
-        }
-        console.log("The following properties could be set: " + data);
-
-        startModel(successCallback, errorCallback);
-      },
-      errorCallback,
-      propertyMap
-    );
+    if (propertyCount > 0) {
+      setRuntimeComponentProperties(
+        function(data, HTTPstatus) {
+          // if (JSON.parse(data).length == 0) {
+          if (data.length !== propertyCount) {
+            if (data.length > 0) console.log("Only following properties set successfully: " + data);
+            let errorMsg = "Could not set all properties successfully.";
+            alert(errorMsg);
+          }
+          console.log("The following properties could be set: " + data);
+          startModel(successCallback, errorCallback);
+        },
+        errorCallback,
+        propertyMap
+      );
+    } else {
+      startModel(successCallback, errorCallback);
+    }
   });
 }
 
@@ -116,7 +139,7 @@ function deployModelFromWebserverApplySettingsAndStartModel(relFilePath, propert
  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
  */
-function storeFileFromWebserverOnARE(relFilePath, relFilePathARE, successCallback, errorCallback) {
+export function storeFileFromWebserverOnARE(relFilePath, relFilePathARE, successCallback, errorCallback) {
   //assign default callback functions if none was provided.
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
@@ -126,160 +149,172 @@ function storeFileFromWebserverOnARE(relFilePath, relFilePathARE, successCallbac
   });
 }
 
-/**
- * Download the model file (modelFilePathOnWebserver) hosted on a web server, apply all settings to the XML model,
- * which have a defined binding (data-asterics-model-binding-1,...) to a model property and finally start the model.
- * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
- * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
- * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
- */
+// /**
+//  * Download the model file (modelFilePathOnWebserver) hosted on a web server, apply all settings to the XML model,
+//  * which have a defined binding (data-asterics-model-binding-1,...) to a model property and finally start the model.
+//  * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
+//  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
+//  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
+//  */
 
-function applySettingsInXMLModelAndStart(modelFilePathOnWebserver, successCallback, errorCallback) {
-  //assign default callback functions if none was provided.
-  successCallback = getSuccessCallback(successCallback);
-  errorCallback = getErrorCallback(errorCallback);
+// export function applySettingsInXMLModelAndStart(modelFilePathOnWebserver, successCallback, errorCallback) {
+//   //assign default callback functions if none was provided.
+//   successCallback = getSuccessCallback(successCallback);
+//   errorCallback = getErrorCallback(errorCallback);
 
-  loadFileFromWebServer(modelFilePathOnWebserver, function(modelInXML) {
-    modelInXML = updateModelPropertiesFromWidgets(modelInXML);
+//   loadFileFromWebServer(modelFilePathOnWebserver, function(modelInXML) {
+//     modelInXML = updateModelPropertiesFromWidgets(modelInXML);
 
-    //Finally upload and start modified model.
-    uploadModel(
-      function(data, HTTPstatus) {
-        startModel(function(data, HTTPStatus) {
-          successCallback(data, HTTPStatus);
-        }, errorCallback);
-      },
-      errorCallback,
-      modelInXML
-    );
-  });
-}
+//     //Finally upload and start modified model.
+//     uploadModel(
+//       function(data, HTTPstatus) {
+//         startModel(function(data, HTTPStatus) {
+//           successCallback(data, HTTPStatus);
+//         }, errorCallback);
+//       },
+//       errorCallback,
+//       modelInXML
+//     );
+//   });
+// }
 
-/**
- * Download the currently deployed model from the ARE and update all widgets with the property values in the XML model,
- * which have a defined binding (data-asterics-model-binding-1,...) to a model property.
- * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
- * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
- * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
- */
+// /**
+//  * Download the currently deployed model from the ARE and update all widgets with the property values in the XML model,
+//  * which have a defined binding (data-asterics-model-binding-1,...) to a model property.
+//  * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
+//  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
+//  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
+//  */
 
-function updateWidgetsFromDeployedModel(successCallback, errorCallback) {
-  //assign default callback functions if none was provided.
-  successCallback = getSuccessCallback(successCallback);
-  errorCallback = getErrorCallback(errorCallback);
+// export function updateWidgetsFromDeployedModel(successCallback, errorCallback) {
+//   //assign default callback functions if none was provided.
+//   successCallback = getSuccessCallback(successCallback);
+//   errorCallback = getErrorCallback(errorCallback);
 
-  downloadDeployedModel(function(data, HTTPStatus) {
-    //TODO: Check if the modelName is identical to the modelName of the template model, otherwise we should not
-    //update the widgets from a wrong model.
-    updateWidgetsFromModelProperties(data);
-  }, successCallback);
-}
+//   downloadDeployedModel(function(data, HTTPStatus) {
+//     //TODO: Check if the modelName is identical to the modelName of the template model, otherwise we should not
+//     //update the widgets from a wrong model.
+//     updateWidgetsFromModelProperties(data);
+//   }, successCallback);
+// }
 
-/**
- * Applies the settings to the model modelFilePathOnWebserver and saves it as autostart model on the ARE.
- * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
- * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
- * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
- */
+// /**
+//  * Applies the settings to the model modelFilePathOnWebserver and saves it as autostart model on the ARE.
+//  * @param {string} modelFilePathOnWebserver - The path of the file relative to http://location.origin/subpath/.
+//  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents.
+//  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error.
+//  */
 
-function saveSettingsAsAutostartModel(modelFilePathOnWebserver, successCallback, errorCallback) {
-  //assign default callback functions if none was provided.
-  if (typeof successCallback !== "function") {
-    successCallback = function(data, HTTPStatus) {
-      alert("Successfully saved settings as autostart!");
-    };
-  }
-  errorCallback = getErrorCallback(errorCallback);
+// export function saveSettingsAsAutostartModel(modelFilePathOnWebserver, successCallback, errorCallback) {
+//   //assign default callback functions if none was provided.
+//   if (typeof successCallback !== "function") {
+//     successCallback = function(data, HTTPStatus) {
+//       alert("Successfully saved settings as autostart!");
+//     };
+//   }
+//   errorCallback = getErrorCallback(errorCallback);
 
-  loadFileFromWebServer(modelFilePathOnWebserver, function(modelInXML) {
-    modelInXML = updateModelPropertiesFromWidgets(modelInXML);
-    storeModel(successCallback, errorCallback, "autostart.acs", modelInXML);
-  });
-}
+//   loadFileFromWebServer(modelFilePathOnWebserver, function(modelInXML) {
+//     modelInXML = updateModelPropertiesFromWidgets(modelInXML);
+//     storeModel(successCallback, errorCallback, "autostart.acs", modelInXML);
+//   });
+// }
 
-/**
- * @const {string}
- * @description HTML5 data attribute to define binding to AsTeRICS model
- */
-var dataAttrAstericsModelBinding = "data-asterics-model-binding-1";
+// /**
+//  * @const {string}
+//  * @description HTML5 data attribute to define binding to AsTeRICS model
+//  */
+// var dataAttrAstericsModelBinding = "data-asterics-model-binding-1";
 
-/**
- * Updates the property values of the given modelInXML string with the currently set widget values.
- * @param {string} modelInXML - The AsTeRICS model as XML string.
- * @returns {string} The modified XML model as string.
- */
-function updateModelPropertiesFromWidgets(modelInXML) {
-  widgetIdToPropertyKeyMap = generateWidgetIdToPropertyKeyMap();
-  console.log("Updating " + widgetIdToPropertyKeyMap.length + " widgets from model properties.");
+// /**
+//  * Updates the property values of the given modelInXML string with the currently set widget values.
+//  * @param {string} modelInXML - The AsTeRICS model as XML string.
+//  * @returns {string} The modified XML model as string.
+//  */
+// export function updateModelPropertiesFromWidgets(modelInXML) {
+//   var widgetIdToPropertyKeyMap = generateWidgetIdToPropertyKeyMap();
+//   console.log("Updating " + widgetIdToPropertyKeyMap.length + " widgets from model properties.");
 
-  //parse template modelInXML to document object
-  var xmlDoc = $.parseXML(modelInXML);
+//   //parse template modelInXML to document object
+//   // var xmlDoc = $.parseXML(modelInXML);
+//   var xmlDoc = new DOMParser().parseFromString(modelInXML);
 
-  //Update property values with values of input widgets.
-  for (var i = 0; i < widgetIdToPropertyKeyMap.length; i++) {
-    var widgetVal = $(widgetIdToPropertyKeyMap[i]["widgetId"]).val();
-    if (typeof widgetVal != "undefined") {
-      console.log(
-        "Updating modelProperty <" +
-          widgetIdToPropertyKeyMap[i]["componentKey"] +
-          "." +
-          widgetIdToPropertyKeyMap[i]["propertyKey"] +
-          "=" +
-          widgetVal +
-          ">"
-      );
-      setPropertyValueInXMLModel(widgetIdToPropertyKeyMap[i]["componentKey"], widgetIdToPropertyKeyMap[i]["propertyKey"], widgetVal, xmlDoc);
-    } else {
-      console.log("widgetId <" + widgetIdToPropertyKeyMap[i]["widgetId"] + "=undefined>");
-    }
-  }
+//   //Update property values with values of input widgets.
+//   for (var i = 0; i < widgetIdToPropertyKeyMap.length; i++) {
+//     var widgetVal = $(widgetIdToPropertyKeyMap[i]["widgetId"]).val();
+//     if (typeof widgetVal != "undefined") {
+//       console.log(
+//         "Updating modelProperty <" +
+//           widgetIdToPropertyKeyMap[i]["componentKey"] +
+//           "." +
+//           widgetIdToPropertyKeyMap[i]["propertyKey"] +
+//           "=" +
+//           widgetVal +
+//           ">"
+//       );
+//       setPropertyValueInXMLModel(
+//         widgetIdToPropertyKeyMap[i]["componentKey"],
+//         widgetIdToPropertyKeyMap[i]["propertyKey"],
+//         widgetVal,
+//         xmlDoc
+//       );
+//     } else {
+//       console.log("widgetId <" + widgetIdToPropertyKeyMap[i]["widgetId"] + "=undefined>");
+//     }
+//   }
 
-  //Convert back XML document to XML string.
-  modelInXML = xmlToString(xmlDoc);
-  return modelInXML;
-}
+//   //Convert back XML document to XML string.
+//   // modelInXML = xmlToString(xmlDoc);
+//   modelInXML = new XMLSerializer.serializeToString(xmlDoc);
+//   return modelInXML;
+// }
 
-/**
- * Updates the widgets (HTML input elements) with the property values of the given modelInXML string.
- * @param {string} modelInXML - The AsTeRICS model as XML string.
- */
-function updateWidgetsFromModelProperties(modelInXML) {
-  widgetIdToPropertyKeyMap = generateWidgetIdToPropertyKeyMap();
-  console.log("Updating " + widgetIdToPropertyKeyMap.length + " widgets from model properties.");
+// /**
+//  * Updates the widgets (HTML input elements) with the property values of the given modelInXML string.
+//  * @param {string} modelInXML - The AsTeRICS model as XML string.
+//  */
+// export function updateWidgetsFromModelProperties(modelInXML) {
+//   var widgetIdToPropertyKeyMap = generateWidgetIdToPropertyKeyMap();
+//   console.log("Updating " + widgetIdToPropertyKeyMap.length + " widgets from model properties.");
 
-  //parse template modelInXML to document object
-  var xmlDoc = $.parseXML(modelInXML);
+//   //parse template modelInXML to document object
+//   // var xmlDoc = $.parseXML(modelInXML);
+//   var xmlDoc = new DOMParser().parseFromString(modelInXML);
 
-  //Update property values with values of input widgets.
-  for (var i = 0; i < widgetIdToPropertyKeyMap.length; i++) {
-    var propVal = getPropertyValueFromXMLModel(widgetIdToPropertyKeyMap[i]["componentKey"], widgetIdToPropertyKeyMap[i]["propertyKey"], xmlDoc);
-    if (typeof propVal != "undefined") {
-      console.log("Updating widget <" + widgetIdToPropertyKeyMap[i]["widgetId"] + "=" + propVal + ">");
-      $(widgetIdToPropertyKeyMap[i]["widgetId"]).val(propVal);
-    }
-  }
-}
+//   //Update property values with values of input widgets.
+//   for (var i = 0; i < widgetIdToPropertyKeyMap.length; i++) {
+//     var propVal = getPropertyValueFromXMLModel(
+//       widgetIdToPropertyKeyMap[i]["componentKey"],
+//       widgetIdToPropertyKeyMap[i]["propertyKey"],
+//       xmlDoc
+//     );
+//     if (typeof propVal != "undefined") {
+//       console.log("Updating widget <" + widgetIdToPropertyKeyMap[i]["widgetId"] + "=" + propVal + ">");
+//       $(widgetIdToPropertyKeyMap[i]["widgetId"]).val(propVal);
+//     }
+//   }
+// }
 
-/**
- * Generates an array describing the bindings between all widgetIds (id of HTML5 input tag) and their respective model properties.
- * @returns {Array} - Array with Javascript object elements.
- */
-function generateWidgetIdToPropertyKeyMap() {
-  var widgetIdToPropertyKeyMap = [];
-  var widgetList = $("[" + dataAttrAstericsModelBinding + "]");
-  for (var i = 0; i < widgetList.length; i++) {
-    var bindings = $(widgetList[i]).data();
-    for (binding in bindings) {
-      var bindingObj = {
-        widgetId: "#" + $(widgetList[i]).attr("id"),
-        componentKey: bindings[binding]["componentKey"],
-        propertyKey: bindings[binding]["propertyKey"]
-      };
-      widgetIdToPropertyKeyMap.push(bindingObj);
-    }
-  }
-  return widgetIdToPropertyKeyMap;
-}
+// /**
+//  * Generates an array describing the bindings between all widgetIds (id of HTML5 input tag) and their respective model properties.
+//  * @returns {Array} - Array with Javascript object elements.
+//  */
+// export function generateWidgetIdToPropertyKeyMap() {
+//   var widgetIdToPropertyKeyMap = [];
+//   var widgetList = $("[" + dataAttrAstericsModelBinding + "]");
+//   for (var i = 0; i < widgetList.length; i++) {
+//     var bindings = $(widgetList[i]).data();
+//     for (binding in bindings) {
+//       var bindingObj = {
+//         widgetId: "#" + $(widgetList[i]).attr("id"),
+//         componentKey: bindings[binding]["componentKey"],
+//         propertyKey: bindings[binding]["propertyKey"]
+//       };
+//       widgetIdToPropertyKeyMap.push(bindingObj);
+//     }
+//   }
+//   return widgetIdToPropertyKeyMap;
+// }
 
 /**
  * Returns a valid callback function - either successCallback if != undefined or {defaultSuccessCallback}.
