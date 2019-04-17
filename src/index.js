@@ -11,7 +11,7 @@
 import axios from "axios";
 // import $ from "jquery";
 // import { DOMParser, XMLSerializer } from "xmldom";
-import { startModel, uploadModel, setRuntimeComponentProperties, storeData } from "@asterics/rest";
+import { startModel, uploadModel, setRuntimeComponentProperties, storeData } from "@asterics/are-rest";
 
 /**
  * Loads a file hosted on the same webserver as this file and returns the contents as plain text.
