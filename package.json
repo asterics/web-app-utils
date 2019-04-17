@@ -1,6 +1,6 @@
 {
   "name": "@asterics/web-app-utils",
-  "version": "0.0.1",
+  "version": "0.0.1-rc1",
   "description": "AsTeRICS Web App Utilities",
   "main": "dist/index.js",
   "files": [
@@ -23,6 +23,9 @@
     "AsTeRICS",
     "Accessibility"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Alija Sabic <sabic@technikum-wien.at>",
   "license": "GPL-3.0",
   "bugs": {
