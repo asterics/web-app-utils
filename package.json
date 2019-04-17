@@ -1,6 +1,6 @@
 {
   "name": "@asterics/web-app-utils",
-  "version": "0.0.1-alpha.0",
+  "version": "0.0.1-alpha.1",
   "description": "AsTeRICS Web App Utilities",
   "main": "dist/index.js",
   "files": [
