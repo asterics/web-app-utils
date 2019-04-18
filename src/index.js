@@ -8,7 +8,12 @@
  */
 
 import axios from "axios";
-import { startModel, uploadModel, setRuntimeComponentProperties, storeData } from "@asterics/are-rest";
+import { startModel, uploadModel, setRuntimeComponentProperties, storeData, setBaseURI as setBase } from "@asterics/are-rest";
+
+//set the base uri (usually where ARE runs at)
+export function setBaseURI(uri) {
+  setBase(uri);
+}
 
 /**
  * Loads a file hosted on the same webserver as this file and returns the contents as plain text.
