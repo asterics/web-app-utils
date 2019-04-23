@@ -1,6 +1,6 @@
 {
   "name": "@asterics/web-app-utils",
-  "version": "0.0.1-alpha.3",
+  "version": "0.0.1-alpha.4",
   "description": "AsTeRICS Web App Utilities",
   "main": "dist/index.js",
   "files": [
@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/sabicalija/web-app-utils#readme",
   "dependencies": {
-    "@asterics/are-rest": "0.0.1-alpha.0",
+    "@asterics/are-rest": "0.0.1-alpha.1",
     "axios": "^0.18.0",
     "xmldom": "^0.1.27",
     "xmlhttprequest": "^1.8.0"
