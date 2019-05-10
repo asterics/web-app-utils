@@ -48,9 +48,13 @@ export function deployModelFromWebserver(relFilePath, successCallback, errorCall
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
 
-  loadFileFromWebServer(relFilePath, function(modelInXML) {
-    uploadModel(successCallback, errorCallback, modelInXML);
-  });
+  loadFileFromWebServer(
+    relFilePath,
+    function(modelInXML) {
+      uploadModel(successCallback, errorCallback, modelInXML, true);
+    },
+    errorCallback
+  );
 }
 
 /**
@@ -72,8 +76,10 @@ export function deployModelFromWebserver(relFilePath, successCallback, errorCall
  * @param {function(data, HTTPstatus)} [successCallback=defaultSuccessCallback] - The callback function to be called with the file contents. 
  * @param {function(HTTPstatus, errorMessage)} [errorCallback=defaultErrorCallback]- Callback function in case of an error. 
  */
-export function deployModelFromWebserverApplySettingsAndStartModel(relFilePath = "", propertyMap = {}, successCallback, errorCallback) {
-  if (typeof propertyMap === "string") propertyMap = JSON.parse(propertyMap);
+
+export function deployModelFromWebserverApplySettingsAndStartModel(relFilePath = "", propertyMap, successCallback, errorCallback) {
+  if (propertyMap === null) propertyMap = {};
+  else if (typeof propertyMap === "string") propertyMap = JSON.parse(propertyMap);
   let propertyCount = 0;
   for (let k in propertyMap) {
     propertyCount += Object.keys(propertyMap[k]).length;
@@ -83,26 +89,29 @@ export function deployModelFromWebserverApplySettingsAndStartModel(relFilePath =
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
 
-  deployModelFromWebserver(relFilePath, function() {
-    if (propertyCount > 0) {
-      setRuntimeComponentProperties(
-        function(data, HTTPstatus) {
-          // if (JSON.parse(data).length == 0) {
-          if (data.length !== propertyCount) {
-            if (data.length > 0) console.log("Only following properties set successfully: " + data);
-            let errorMsg = "Could not set all properties successfully.";
-            alert(errorMsg);
-          }
-          console.log("The following properties could be set: " + data);
-          startModel(successCallback, errorCallback);
-        },
-        errorCallback,
-        propertyMap
-      );
-    } else {
-      startModel(successCallback, errorCallback);
-    }
-  });
+  deployModelFromWebserver(
+    relFilePath,
+    function() {
+      if (propertyCount > 0) {
+        setRuntimeComponentProperties(
+          function(data, HTTPstatus) {
+            if (data.length !== propertyCount) {
+              if (data.length > 0) console.log("Only following properties set successfully: " + data);
+              let errorMsg = "Could not set all properties successfully.";
+              alert(errorMsg);
+            }
+            console.log("The following properties could be set: " + data);
+            startModel(successCallback, errorCallback);
+          },
+          errorCallback,
+          propertyMap
+        );
+      } else {
+        startModel(successCallback, errorCallback);
+      }
+    },
+    errorCallback
+  );
 }
 
 /**
@@ -117,9 +126,13 @@ export function storeFileFromWebserverOnARE(relFilePath, relFilePathARE, success
   successCallback = getSuccessCallback(successCallback);
   errorCallback = getErrorCallback(errorCallback);
 
-  loadFileFromWebServer(relFilePath, function(fileContentsAsString) {
-    storeData(successCallback, errorCallback, relFilePathARE, fileContentsAsString);
-  });
+  loadFileFromWebServer(
+    relFilePath,
+    function(fileContentsAsString) {
+      storeData(successCallback, errorCallback, relFilePathARE, fileContentsAsString);
+    },
+    errorCallback
+  );
 }
 
 /**
