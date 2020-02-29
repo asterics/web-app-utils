@@ -1,0 +1,50 @@
+{
+  "name": "@asterics/web-app-utils",
+  "version": "0.0.1-alpha.6",
+  "description": "AsTeRICS Web App Utilities",
+  "main": "dist/index.js",
+  "files": [
+    "index.js",
+    "index.js.map",
+    "index.node.js",
+    "index.node.js.map"
+  ],
+  "scripts": {
+    "build": "NODE_ENV=production webpack",
+    "dev": "NODE_ENV=development webpack",
+    "release": "semantic-release",
+    "release:prepare": "yarn add -D semantic-release@15 @semantic-release/commit-analyzer @semantic-release/changelog @semantic-release/exec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sabicalija/web-app-utils.git"
+  },
+  "keywords": [
+    "AsTeRICS",
+    "Accessibility"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Alija Sabic <sabic@technikum-wien.at>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/sabicalija/web-app-utils/issues"
+  },
+  "homepage": "https://github.com/sabicalija/web-app-utils#readme",
+  "dependencies": {
+    "@asterics/are-rest": "0.0.1-alpha.4",
+    "axios": "^0.18.0",
+    "xmldom": "^0.1.27"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "@babel/register": "^7.4.0",
+    "babel-loader": "^8.0.5",
+    "jquery": "^3.4.0",
+    "terser-webpack-plugin": "^1.2.3",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
+  }
+}
